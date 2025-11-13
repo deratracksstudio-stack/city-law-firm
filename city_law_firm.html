@@ -1,0 +1,1712 @@
+            BackButton: {
+                show: () => {},
+                hide: () => {},
+                onClick: () => {},
+                offClick: () => {}
+            },
+            HapticFeedback: {
+                impactOccurred: () => {},
+                notificationOccurred: () => {},
+                selectionChanged: () => {}
+            },
+            showAlert: (msg) => alert(msg),
+            showPopup: (params, callback) => {
+                const result = confirm(params.message);
+                if (callback) callback(result ? 'ok' : 'cancel');
+            },
+            openTelegramLink: (url) => window.open(url, '_blank'),
+            setHeaderColor: () => {},
+            setBackgroundColor: () => {},
+            version: '6.0',
+            platform: 'unknown',
+            isExpanded: true,
+            viewportHeight: window.innerHeight,
+            viewportStableHeight: window.innerHeight,
+            initDataUnsafe: {},
+            initData: '',
+            colorScheme: 'light'
+        };
+
+        // Initialize app
+        tg.ready();
+        tg.expand();
+        tg.enableClosingConfirmation();
+
+        // Haptic feedback helper
+        const haptic = {
+            light: () => tg.HapticFeedback.impactOccurred('light'),
+            medium: () => tg.HapticFeedback.impactOccurred('medium'),
+            heavy: () => tg.HapticFeedback.impactOccurred('heavy'),
+            success: () => tg.HapticFeedback.notificationOccurred('success'),
+            error: () => tg.HapticFeedback.notificationOccurred('error'),
+            warning: () => tg.HapticFeedback.notificationOccurred('warning'),
+            selection: () => tg.HapticFeedback.selectionChanged()
+        };
+
+        // Toast notification helper
+        function showToast(message, duration) {
+            duration = duration || 3000;
+            const toast = document.createElement('div');
+            toast.className = 'toast';
+            toast.textContent = message;
+            document.body.appendChild(toast);
+            
+            setTimeout(() => toast.classList.add('show'), 100);
+            setTimeout(() => {
+                toast.classList.remove('show');
+                setTimeout(() => document.body.removeChild(toast), 300);
+            }, duration);
+        }
+
+        // Application state and data
+        const app = {
+            currentStep: 0,
+            userData: {
+                name: '',
+                department: '',
+                role: ''
+            },
+            
+            notifications: [
+                {
+                    type: 'urgent',
+                    title: 'Court Hearing Tomorrow',
+                    message: 'Case #2024-4521: Criminal defense hearing at 9:00 AM',
+                    time: '3:45 PM Today',
+                    channel: 'criminal-urgent',
+                    assignee: 'Sarah Johnson'
+                },
+                {
+                    type: 'info',
+                    title: 'New Case Assignment',
+                    message: 'Corporate merger consultation assigned to your team',
+                    time: '2:30 PM Today',
+                    channel: 'corporate-deals',
+                    assignee: 'Corporate Team'
+                },
+                {
+                    type: 'reminder',
+                    title: 'Client Meeting',
+                    message: 'Family mediation session in 1 hour - Conference Room B',
+                    time: '1:00 PM Today',
+                    channel: 'family-mediation',
+                    assignee: 'Michael Chen'
+                },
+                {
+                    type: 'success',
+                    title: 'Case Won',
+                    message: 'Litigation victory in Smith v. TechCorp! 🎉',
+                    time: '11:15 AM Today',
+                    channel: 'firm-announcements',
+                    assignee: 'All Staff'
+                }
+            ],
+
+            onboardingSteps: [
+                {
+                    title: 'Welcome to City Law Firm',
+                    icon: 'M3 6l3 1m0 0l-3 9a5.002 5.002 0 006.001 0M6 7l3 9M6 7l6-2m6 2l3-1m-3 1l-3 9a5.002 5.002 0 006.001 0M18 7l3 9m-3-9l-6-2m0-2v2m0 16V5m0 16H9m3 0h3',
+                    content: '<p>Welcome to our digital workspace! This platform will help you stay connected with your team, manage cases, and access all firm resources.</p>',
+                    buttonText: 'Get Started'
+                },
+                {
+                    title: 'Your Profile',
+                    icon: 'M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z',
+                    content: '<p>Let\'s set up your profile to customize your experience.</p><div class="form-group"><input type="text" id="userName" placeholder="Full Name" /></div><div class="form-group"><select id="userDept"><option value="">Select Department</option><option value="partners">Partners & Management</option><option value="litigation">Litigation Department</option><option value="corporate">Corporate Law</option><option value="family">Family Law</option><option value="criminal">Criminal Defense</option><option value="admin">Administration & HR</option></select></div><div class="form-group"><input type="text" id="userRole" placeholder="Role (e.g., Senior Associate, Paralegal)" /></div>',
+                    buttonText: 'Next',
+                    requiresInput: true
+                },
+                {
+                    title: 'Your Channels',
+                    icon: 'M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z',
+                    content: '<p>You\'ll be added to relevant channels based on your department. Each channel serves a specific purpose.</p><div class="info-box"><div class="info-item"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/></svg><span>Department Channels</span></div><div class="info-item"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/></svg><span>Firm-wide Announcements</span></div><div class="info-item"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg><span>Case Management</span></div></div>',
+                    buttonText: 'Next'
+                },
+                {
+                    title: 'Meet Your Bots',
+                    icon: 'M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z',
+                    content: '<p>Our automated assistants help you stay on top of deadlines, cases, and firm activities.</p><div class="bot-preview"><h3>@CaseManagerBot</h3><p>Central case management and tracking</p></div><div class="bot-preview"><h3>@CourtDateBot</h3><p>Court appearance alerts and reminders</p></div><div class="bot-preview"><h3>@ClientUpdateBot</h3><p>Client communication tracking</p></div>',
+                    buttonText: 'Next'
+                },
+                {
+                    title: 'Quick Commands',
+                    icon: 'M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253',
+                    content: '<p>Learn essential commands to maximize your productivity.</p><div class="command-item"><code>/myagenda</code><span>View your schedule</span></div><div class="command-item"><code>/newcase</code><span>Register new case</span></div><div class="command-item"><code>/casestatus</code><span>Check case progress</span></div><div class="command-item"><code>/help</code><span>Show all commands</span></div>',
+                    buttonText: 'Next'
+                },
+                {
+                    title: "You're All Set!",
+                    icon: 'M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z',
+                    content: '<p>Your profile is complete! You can now access all firm channels and resources. Welcome to the team!</p>',
+                    buttonText: 'Enter Workspace'
+                }
+            ],
+
+            departments: [
+                {
+                    id: 'partners',
+                    name: 'Partners & Management',
+                    members: 3,
+                    icon: 'M3 6l3 1m0 0l-3 9a5.002 5.002 0 006.001 0M6 7l3 9M6 7l6-2m6 2l3-1m-3 1l-3 9a5.002 5.002 0 006.001 0M18 7l3 9m-3-9l-6-2m0-2v2m0 16V5m0 16H9m3 0h3',
+                    channels: ['partners-private', 'management-decisions'],
+                    bots: ['@CaseAlertBot']
+                },
+                {
+                    id: 'litigation',
+                    name: 'Litigation Department',
+                    members: 8,
+                    icon: 'M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z',
+                    channels: ['litigation-general', 'litigation-cases', 'litigation-court-dates', 'litigation-strategy'],
+                    bots: ['@CourtDateBot', '@CaseManagerBot']
+                },
+                {
+                    id: 'corporate',
+                    name: 'Corporate Law',
+                    members: 6,
+                    icon: 'M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z',
+                    channels: ['corporate-general', 'corporate-deals', 'corporate-compliance'],
+                    bots: ['@ComplianceBot', '@DealTrackerBot']
+                },
+                {
+                    id: 'family',
+                    name: 'Family Law',
+                    members: 4,
+                    icon: 'M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z',
+                    channels: ['family-general', 'family-cases', 'family-mediation'],
+                    bots: ['@MediationScheduleBot']
+                },
+                {
+                    id: 'criminal',
+                    name: 'Criminal Defense',
+                    members: 5,
+                    icon: 'M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z',
+                    channels: ['criminal-general', 'criminal-cases', 'criminal-urgent'],
+                    bots: ['@UrgentCaseBot']
+                },
+                {
+                    id: 'admin',
+                    name: 'Administration & HR',
+                    members: 4,
+                    icon: 'M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z',
+                    channels: ['admin-general', 'hr-announcements', 'admin-facilities'],
+                    bots: ['@HRBot', '@LeaveTrackerBot']
+                }
+            ],
+
+            bots: [
+                {
+                    name: '@CaseManagerBot',
+                    purpose: 'Central case management',
+                    features: ['Case tracking', 'Deadline reminders', 'Document organization', 'Status updates']
+                },
+                {
+                    name: '@CourtDateBot',
+                    purpose: 'Court appearance management',
+                    features: ['24hr & 1hr before alerts', 'Calendar sync', 'Location details', 'Preparation reminders']
+                },
+                {
+                    name: '@ClientUpdateBot',
+                    purpose: 'Client communication tracking',
+                    features: ['Update reminders', 'Communication logs', 'Response templates', 'Follow-up alerts']
+                },
+                {
+                    name: '@BillingBot',
+                    purpose: 'Time tracking & billing',
+                    features: ['Time entry reminders', 'Billable hours tracking', 'Monthly summaries', 'Invoice generation']
+                },
+                {
+                    name: '@ComplianceBot',
+                    purpose: 'Compliance monitoring',
+                    features: ['Regulatory updates', 'Deadline tracking', 'Audit reminders', 'Document compliance']
+                }
+            ],
+
+            commands: [
+                { cmd: '/myagenda', desc: 'View your daily schedule and court dates' },
+                { cmd: '/newcase', desc: 'Register a new case' },
+                { cmd: '/casestatus [id]', desc: 'Check status of a case' },
+                { cmd: '/requestleave', desc: 'Submit leave request' },
+                { cmd: '/resources [topic]', desc: 'Search legal resources' },
+                { cmd: '/emergency', desc: 'Alert partners about urgent matter' },
+                { cmd: '/refer [case]', desc: 'Refer case to another department' },
+                { cmd: '/help', desc: 'Show all available commands' }
+            ],
+
+            quickActions: [
+                {
+                    icon: 'M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z',
+                    title: 'New Case',
+                    desc: 'Register new client',
+                    action: 'newCase'
+                },
+                {
+                    icon: 'M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z',
+                    title: 'My Agenda',
+                    desc: 'View schedule',
+                    action: 'myAgenda'
+                },
+                {
+                    icon: 'M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253',
+                    title: 'Resources',
+                    desc: 'Legal library',
+                    action: 'resources'
+                },
+                {
+                    icon: 'M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z',
+                    title: 'Team',
+                    desc: 'View colleagues',
+                    action: 'team'
+                }
+            ],
+
+            // Onboarding functions
+            startOnboarding() {
+                haptic.light();
+                document.getElementById('welcomeScreen').classList.add('hidden');
+                document.getElementById('onboardingScreen').classList.remove('hidden');
+                this.renderStep();
+            },
+
+            renderStep() {
+                const step = this.onboardingSteps[this.currentStep];
+                
+                document.getElementById('stepTitle').textContent = step.title;
+                document.getElementById('stepIcon').innerHTML = '<svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="' + step.icon + '"/></svg>';
+                document.getElementById('stepContent').innerHTML = step.content;
+                document.getElementById('nextBtn').textContent = step.buttonText;
+
+                const progressDots = document.getElementById('progressDots');
+                progressDots.innerHTML = '';
+                this.onboardingSteps.forEach((_, idx) => {
+                    const dot = document.createElement('div');
+                    dot.className = 'progress-dot' + (idx === this.currentStep ? ' active' : '');
+                    progressDots.appendChild(dot);
+                });
+
+                const backBtn = document.getElementById('backBtn');
+                if (this.currentStep > 0) {
+                    backBtn.classList.remove('hidden');
+                } else {
+                    backBtn.classList.add('hidden');
+                }
+
+                if (step.requiresInput) {
+                    setTimeout(() => {
+                        const nameInput = document.getElementById('userName');
+                        const deptSelect = document.getElementById('userDept');
+                        const roleInput = document.getElementById('userRole');
+                        
+                        if (nameInput) nameInput.value = this.userData.name;
+                        if (deptSelect) deptSelect.value = this.userData.department;
+                        if (roleInput) roleInput.value = this.userData.role;
+
+                        const updateBtn = () => {
+                            const isValid = this.userData.name && this.userData.department && this.userData.role;
+                            document.getElementById('nextBtn').disabled = !isValid;
+                        };
+
+                        if (nameInput) nameInput.addEventListener('input', (e) => {
+                            this.userData.name = e.target.value;
+                            updateBtn();
+                        });
+                        if (deptSelect) deptSelect.addEventListener('change', (e) => {
+                            this.userData.department = e.target.value;
+                            updateBtn();
+                        });
+                        if (roleInput) roleInput.addEventListener('input', (e) => {
+                            this.userData.role = e.target.value;
+                            updateBtn();
+                        });
+                        
+                        updateBtn();
+                    }, 100);
+                }
+            },
+
+            nextStep() {
+                if (this.currentStep === 1) {
+                    const name = document.getElementById('userName');
+                    const dept = document.getElementById('userDept');
+                    const role = document.getElementById('userRole');
+
+                    if (!name || !dept || !role || !name.value || !dept.value || !role.value) {
+                        tg.showAlert('Please fill in all fields');
+                        haptic.error();
+                        return;
+                    }
+
+                    this.userData.name = name.value;
+                    this.userData.department = dept.value;
+                    this.userData.role = role.value;
+                }
+
+                haptic.light();
+                if (this.currentStep < this.onboardingSteps.length - 1) {
+                    this.currentStep++;
+                    this.renderStep();
+                } else {
+                    haptic.success();
+                    this.showDashboard();
+                }
+            },
+
+            previousStep() {
+                haptic.light();
+                if (this.currentStep > 0) {
+                    this.currentStep--;
+                    this.renderStep();
+                }
+            },
+
+            showDashboard() {
+                document.getElementById('onboardingScreen').classList.add('hidden');
+                document.getElementById('dashboard').classList.add('active');
+
+                const deptObj = this.departments.find(d => d.id === this.userData.department);
+                const deptName = deptObj ? deptObj.name : this.userData.department;
+
+                document.getElementById('userInfo').innerHTML = '<div class="name">' + this.userData.name + '</div><div class="role">' + this.userData.role + ' • ' + deptName + '</div>';
+
+                this.renderNotifications();
+                this.renderQuickActions();
+                this.renderDepartments();
+                this.renderBots();
+                this.renderCommands();
+
+                tg.MainButton.setText('Open Telegram Channels');
+                tg.MainButton.show();
+                tg.MainButton.onClick(() => {
+                    tg.showPopup({
+                        title: 'Open Channels',
+                        message: 'Access your department channels and start collaborating with your team.',
+                        buttons: [
+                            {id: 'cancel', type: 'cancel'},
+                            {id: 'open', type: 'default', text: 'Open Channels'}
+                        ]
+                    }, (buttonId) => {
+                        if (buttonId === 'open') {
+                            tg.showAlert('🚀 Opening City Law Firm workspace in Telegram...');
+                            tg.openTelegramLink('https://t.me/citylawfirm');
+                        }
+                    });
+                });
+
+                tg.BackButton.show();
+                tg.BackButton.onClick(() => {
+                    tg.showPopup({
+                        title: 'Return to Welcome?',
+                        message: 'Your profile will be saved. You can return to the workspace anytime.',
+                        buttons: [
+                            {id: 'cancel', type: 'cancel'},
+                            {id: 'back', type: 'default', text: 'Go Back'}
+                        ]
+                    }, (buttonId) => {
+                        if (buttonId === 'back') {
+                            document.getElementById('dashboard').classList.remove('active');
+                            document.getElementById('welcomeScreen').classList.remove('hidden');
+                            this.currentStep = 0;
+                            tg.BackButton.hide();
+                            tg.MainButton.hide();
+                        }
+                    });
+                });
+            },
+
+            // Dashboard rendering functions
+            renderNotifications() {
+                const container = document.getElementById('notifications');
+                const notifItems = this.notifications.map((n, idx) => {
+                    return '<div class="notification-item notification-' + n.type + '" onclick="app.openNotification(' + idx + ')">' +
+                        '<h3>' + n.title + '</h3>' +
+                        '<p>' + n.message + '</p>' +
+                        '<div class="notification-meta">' +
+                            '<span>#' + n.channel + '</span>' +
+                            '<span>•</span>' +
+                            '<span>' + n.assignee + '</span>' +
+                            '<span>•</span>' +
+                            '<span>' + n.time + '</span>' +
+                        '</div>' +
+                    '</div>';
+                }).join('');
+                
+                container.innerHTML = notifItems;
+            },
+
+            openNotification(index) {
+                const notif = this.notifications[index];
+                let buttons = [];
+                
+                if (notif.type === 'urgent') {
+                    buttons = [
+                        {id: 'cancel', type: 'cancel'},
+                        {id: 'view', type: 'default', text: 'View Details'}
+                    ];
+                } else {
+                    buttons = [{id: 'ok', type: 'default', text: 'OK'}];
+                }
+                
+                tg.showPopup({
+                    title: notif.title,
+                    message: notif.message + '\n\nChannel: #' + notif.channel + '\nFrom: ' + notif.assignee + '\nTime: ' + notif.time,
+                    buttons: buttons
+                }, (buttonId) => {
+                    if (buttonId === 'view') {
+                        this.openChannel(notif.channel);
+                    }
+                });
+            },
+
+            addNotification(type, title, message, time, channel, assignee) {
+                this.notifications.unshift({ type, title, message, time, channel, assignee });
+                this.renderNotifications();
+            },
+
+            renderQuickActions() {
+                const container = document.getElementById('quickActions');
+                const actionBtns = this.quickActions.map(action => {
+                    return '<button class="action-btn" onclick="app.handleQuickAction(\'' + action.action + '\')">' +
+                        '<svg fill="none" stroke="currentColor" viewBox="0 0 24 24">' +
+                            '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="' + action.icon + '"/>' +
+                        '</svg>' +
+                        '<h3>' + action.title + '</h3>' +
+                        '<p>' + action.desc + '</p>' +
+                    '</button>';
+                }).join('');
+                
+                container.innerHTML = actionBtns;
+            },
+
+            handleQuickAction(action) {
+                haptic.selection();
+                switch(action) {
+                    case 'newCase':
+                        this.showNewCaseForm();
+                        break;
+                    case 'myAgenda':
+                        this.showAgenda();
+                        break;
+                    case 'resources':
+                        this.showResources();
+                        break;
+                    case 'team':
+                        this.showTeam();
+                        break;
+                }
+            },
+
+            showNewCaseForm() {
+                tg.showPopup({
+                    title: 'New Case',
+                    message: 'Create a new case file. Enter case details in the system.',
+                    buttons: [
+                        {id: 'cancel', type: 'cancel'},
+                        {id: 'submit', type: 'default', text: 'Create Case'}
+                    ]
+                }, (buttonId) => {
+                    if (buttonId === 'submit') {
+                        const caseId = 'CASE-' + Date.now().toString().slice(-6);
+                        haptic.success();
+                        showToast('Case ' + caseId + ' created successfully!');
+                        tg.showAlert('✅ New case ' + caseId + ' created successfully!');
+                        this.addNotification('success', 'Case Created', 'Case ' + caseId + ' registered in the system', 'Just now', 'case-management', this.userData.name);
+                    }
+                });
+            },
+
+            showAgenda() {
+                const today = new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+                tg.showPopup({
+                    title: 'My Agenda - ' + today,
+                    message: '9:00 AM - Team Standup\n11:00 AM - Client Meeting (Smith Case)\n2:30 PM - Court Hearing Prep\n4:00 PM - Document Review',
+                    buttons: [{id: 'ok', type: 'default', text: 'OK'}]
+                });
+            },
+
+            showResources() {
+                tg.showPopup({
+                    title: 'Legal Resources',
+                    message: 'Access legal library, case precedents, templates, and research materials.',
+                    buttons: [
+                        {id: 'cancel', type: 'cancel'},
+                        {id: 'open', type: 'default', text: 'Open Library'}
+                    ]
+                }, (buttonId) => {
+                    if (buttonId === 'open') {
+                        tg.showAlert('📚 Opening legal resources library...');
+                    }
+                });
+            },
+
+            showTeam() {
+                const deptObj = this.departments.find(d => d.id === this.userData.department);
+                const deptName = deptObj ? deptObj.name : 'Your Department';
+                const deptMembers = deptObj ? deptObj.members : 0;
+                tg.showPopup({
+                    title: deptName,
+                    message: deptMembers + ' team members\n\nView profiles, contact info, availability status, and send direct messages.',
+                    buttons: [
+                        {id: 'cancel', type: 'cancel'},
+                        {id: 'view', type: 'default', text: 'View Team'}
+                    ]
+                }, (buttonId) => {
+                    if (buttonId === 'view') {
+                        tg.showAlert('👥 Opening team directory...');
+                    }
+                });
+            },
+
+            renderDepartments() {
+                const container = document.getElementById('departments');
+                const deptCards = this.departments.map(dept => {
+                    const channelItems = dept.channels.map(ch => '<div class="channel-item" onclick="event.stopPropagation(); app.openChannel(\'' + ch + '\')">#' + ch + '</div>').join('');
+                    const botItems = dept.bots.map(bot => '<div class="bot-item" onclick="event.stopPropagation(); app.openBot(\'' + bot + '\')">' + bot + '</div>').join('');
+                    
+                    return '<div class="dept-card" data-dept-id="' + dept.id + '" onclick="app.toggleDept(\'' + dept.id + '\')">' +
+                        '<div class="dept-header">' +
+                            '<div class="dept-icon">' +
+                                '<svg fill="none" stroke="currentColor" viewBox="0 0 24 24">' +
+                                    '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="' + dept.icon + '"/>' +
+                                '</svg>' +
+                            '</div>' +
+                            '<div>' +
+                                '<h3>' + dept.name + '</h3>' +
+                                '<p class="members">' + dept.members + ' members</p>' +
+                            '</div>' +
+                        '</div>' +
+                        '<div class="dept-details">' +
+                            '<h4>Channels:</h4>' +
+                            channelItems +
+                            '<h4 style="margin-top: 12px;">Bots:</h4>' +
+                            botItems +
+                        '</div>' +
+                    '</div>';
+                }).join('');
+                
+                container.innerHTML = deptCards;
+            },
+
+            toggleDept(id) {
+                haptic.selection();
+                const cards = document.querySelectorAll('.dept-card');
+                cards.forEach(card => {
+                    if (card.dataset.deptId === id) {
+                        card.classList.toggle('active');
+                    } else {
+                        card.classList.remove('active');
+                    }
+                });
+            },
+
+            openChannel(channelName) {
+                haptic.light();
+                tg.showPopup({
+                    title: '#' + channelName,
+                    message: 'This channel provides team communication and updates. Open in Telegram?',
+                    buttons: [
+                        {id: 'cancel', type: 'cancel'},
+                        {id: 'open', type: 'default', text: 'Open Channel'}
+                    ]
+                }, (buttonId) => {
+                    if (buttonId === 'open') {
+                        haptic.success();
+                        showToast('Opening channel in Telegram...');
+                        tg.showAlert('Opening #' + channelName + ' in Telegram...');
+                        tg.openTelegramLink('https://t.me/citylawfirm_' + channelName.replace(/-/g, '_'));
+                    }
+                });
+            },
+
+            openBot(botName) {
+                haptic.light();
+                tg.showPopup({
+                    title: botName,
+                    message: 'Interact with this automation bot. Start conversation?',
+                    buttons: [
+                        {id: 'cancel', type: 'cancel'},
+                        {id: 'start', type: 'default', text: 'Start Bot'}
+                    ]
+                }, (buttonId) => {
+                    if (buttonId === 'start') {
+                        haptic.success();
+                        showToast('Starting bot...');
+                        tg.showAlert('Starting ' + botName + '...');
+                        const botUsername = botName.replace('@', '');
+                        tg.openTelegramLink('https://t.me/' + botUsername);
+                    }
+                });
+            },
+
+            renderBots() {
+                const container = document.getElementById('bots');
+                const botCards = this.bots.map((bot, idx) => {
+                    const features = bot.features.map(f => {
+                        return '<div class="bot-feature">' +
+                            '<svg fill="none" stroke="currentColor" viewBox="0 0 24 24">' +
+                                '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>' +
+                            '</svg>' +
+                            '<span>' + f + '</span>' +
+                        '</div>';
+                    }).join('');
+                    
+                    return '<div class="bot-card" onclick="app.interactWithBot(' + idx + ')">' +
+                        '<h3>' + bot.name + '</h3>' +
+                        '<p>' + bot.purpose + '</p>' +
+                        '<div class="bot-features">' +
+                            features +
+                        '</div>' +
+                    '</div>';
+                }).join('');
+                
+                container.innerHTML = botCards;
+            },
+
+            interactWithBot(index) {
+                const bot = this.bots[index];
+                const featureList = bot.features.map(f => '• ' + f).join('\n');
+                tg.showPopup({
+                    title: bot.name,
+                    message: bot.purpose + '\n\nFeatures:\n' + featureList + '\n\nStart conversation with this bot?',
+                    buttons: [
+                        {id: 'cancel', type: 'cancel'},
+                        {id: 'start', type: 'default', text: 'Start Bot'}
+                    ]
+                }, (buttonId) => {
+                    if (buttonId === 'start') {
+                        const botUsername = bot.name.replace('@', '');
+                        tg.showAlert('Starting ' + bot.name + '...');
+                        tg.openTelegramLink('https://t.me/' + botUsername);
+                    }
+                });
+            },
+
+            renderCommands() {
+                const container = document.getElementById('commands');
+                const cmdCards = this.commands.map(cmd => {
+                    return '<div class="command-card" onclick="app.executeCommand(\'' + cmd.cmd + '\')">' +
+                        '<code>' + cmd.cmd + '</code>' +
+                        '<span>' + cmd.desc + '</span>' +
+                    '</div>';
+                }).join('');
+                
+                container.innerHTML = cmdCards;
+            },
+
+            executeCommand(command) {
+                haptic.selection();
+                const cmd = command.split(' ')[0];
+                
+                switch(cmd) {
+                    case '/myagenda':
+                        this.showAgenda();
+                        break;
+                    case '/newcase':
+                        this.showNewCaseForm();
+                        break;
+                    case '/casestatus':
+                        tg.showPopup({
+                            title: 'Case Status',
+                            message: 'Enter case ID to check status:',
+                            buttons: [
+                                {id: 'cancel', type: 'cancel'},
+                                {id: 'check', type: 'default', text: 'Check Status'}
+                            ]
+                        }, (buttonId) => {
+                            if (buttonId === 'check') {
+                                tg.showAlert('Case #2024-4521: Active - Discovery phase\nNext hearing: Nov 15, 2025');
+                            }
+                        });
+                        break;
+                    case '/requestleave':
+                        tg.showPopup({
+                            title: 'Request Leave',
+                            message: 'Select leave type and dates to submit request.',
+                            buttons: [
+                                {id: 'cancel', type: 'cancel'},
+                                {id: 'submit', type: 'default', text: 'Submit Request'}
+                            ]
+                        }, (buttonId) => {
+                            if (buttonId === 'submit') {
+                                haptic.success();
+                                showToast('Leave request submitted');
+                                tg.showAlert('✅ Leave request submitted to HR for approval');
+                                this.addNotification('info', 'Leave Request', 'Your leave request has been submitted', 'Just now', 'hr-announcements', this.userData.name);
+                            }
+                        });
+                        break;
+                    case '/resources':
+                        this.showResources();
+                        break;
+                    case '/emergency':
+                        tg.showPopup({
+                            title: '🚨 Emergency Alert',
+                            message: 'This will immediately notify all partners. Continue?',
+                            buttons: [
+                                {id: 'cancel', type: 'cancel'},
+                                {id: 'alert', type: 'destructive', text: 'Send Alert'}
+                            ]
+                        }, (buttonId) => {
+                            if (buttonId === 'alert') {
+                                haptic.warning();
+                                showToast('Emergency alert sent');
+                                tg.showAlert('🚨 Emergency alert sent to all partners');
+                                this.addNotification('urgent', 'Emergency Alert', 'Urgent matter flagged by ' + this.userData.name, 'Just now', 'partners-private', this.userData.name);
+                            }
+                        });
+                        break;
+                    case '/refer':
+                        tg.showPopup({
+                            title: 'Refer Case',
+                            message: 'Select department to refer the case:',
+                            buttons: [
+                                {id: 'cancel', type: 'cancel'},
+                                {id: 'refer', type: 'default', text: 'Send Referral'}
+                            ]
+                        }, (buttonId) => {
+                            if (buttonId === 'refer') {
+                                haptic.success();
+                                showToast('Case referral sent');
+                                tg.showAlert('✅ Case referral sent successfully');
+                                this.addNotification('info', 'Case Referral', 'New case referred from ' + this.userData.department, 'Just now', 'case-referrals', this.userData.name);
+                            }
+                        });
+                        break;
+                    case '/help':
+                        tg.showPopup({
+                            title: 'Available Commands',
+                            message: '/myagenda - View schedule\n/newcase - Register case\n/casestatus - Check case\n/requestleave - Submit leave\n/resources - Legal library\n/emergency - Alert partners\n/refer - Refer case\n/help - Show commands',
+                            buttons: [{id: 'ok', type: 'default', text: 'OK'}]
+                        });
+                        break;
+                    default:
+                        haptic.error();
+                        tg.showAlert('Command not recognized. Type /help for available commands.');
+                }
+            }
+        };
+
+        // Initialize Telegram theme
+        tg.setHeaderColor('#1e40af');
+        tg.setBackgroundColor('#eff6ff');
+
+        // Prevent pull-to-refresh
+        document.body.addEventListener('touchmove', (e) => {
+            if (e.touches.length > 1) {
+                e.preventDefault();
+            }
+        }, { passive: false });
+
+        // Log initialization
+        console.log('🏛️ City Law Firm Virtual Office initialized');
+        console.log('📱 Telegram WebApp version:', tg.version);
+        console.log('💻 Platform:', tg.platform);
+        console.log('✅ App ready for use');
+
+        // Welcome message
+        if (tg.initDataUnsafe && tg.initDataUnsafe.user) {
+            console.log('👤 User:', tg.initDataUnsafe.user.first_name);
+        }
+    </script>
+</body>
+</html><!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="description" content="City Law Firm Virtual Office - Integrated workspace for case management and team collaboration">
+    <meta name="theme-color" content="#1e40af">
+    <title>City Law Firm - Virtual Office</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+            -webkit-touch-callout: none;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: linear-gradient(135deg, #1e3a8a 0%, #1e40af 100%);
+            color: #1f2937;
+            overflow-x: hidden;
+            -webkit-font-smoothing: antialiased;
+            -webkit-tap-highlight-color: transparent;
+            touch-action: manipulation;
+        }
+
+        .app-container {
+            min-height: 100vh;
+            padding-bottom: 80px;
+        }
+
+        /* Welcome Screen */
+        .welcome-screen {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            padding: 20px;
+            text-align: center;
+        }
+
+        .logo {
+            width: 120px;
+            height: 120px;
+            background: white;
+            border-radius: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 24px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            opacity: 0;
+            animation: fadeInScale 0.6s ease forwards;
+        }
+
+        @keyframes fadeInScale {
+            from {
+                opacity: 0;
+                transform: scale(0.8);
+            }
+            to {
+                opacity: 1;
+                transform: scale(1);
+            }
+        }
+
+        .logo svg {
+            width: 64px;
+            height: 64px;
+            stroke: #2563eb;
+        }
+
+        .welcome-screen h1 {
+            color: white;
+            font-size: 36px;
+            font-weight: 700;
+            margin-bottom: 12px;
+        }
+
+        .welcome-screen .subtitle {
+            color: #93c5fd;
+            font-size: 18px;
+            margin-bottom: 32px;
+            opacity: 0;
+            animation: fadeInUp 0.6s ease forwards 0.3s;
+        }
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .welcome-card {
+            background: white;
+            border-radius: 16px;
+            padding: 24px;
+            margin-bottom: 24px;
+            max-width: 400px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+        }
+
+        .welcome-card p {
+            color: #4b5563;
+            line-height: 1.6;
+            font-size: 16px;
+        }
+
+        /* Onboarding */
+        .onboarding-screen {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .onboarding-card {
+            background: white;
+            border-radius: 20px;
+            padding: 32px 24px;
+            max-width: 500px;
+            width: 100%;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+
+        .step-icon {
+            width: 80px;
+            height: 80px;
+            margin: 0 auto 20px;
+            background: #eff6ff;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .step-icon svg {
+            width: 40px;
+            height: 40px;
+            stroke: #2563eb;
+        }
+
+        .onboarding-card h2 {
+            text-align: center;
+            font-size: 24px;
+            font-weight: 700;
+            margin-bottom: 16px;
+            color: #111827;
+        }
+
+        .progress-dots {
+            display: flex;
+            gap: 8px;
+            justify-content: center;
+            margin-bottom: 24px;
+        }
+
+        .progress-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 4px;
+            background: #d1d5db;
+            transition: all 0.3s ease;
+        }
+
+        .progress-dot.active {
+            width: 32px;
+            background: #2563eb;
+        }
+
+        .onboarding-content {
+            margin-bottom: 24px;
+        }
+
+        .onboarding-content p {
+            text-align: center;
+            color: #6b7280;
+            line-height: 1.6;
+            margin-bottom: 24px;
+        }
+
+        .form-group {
+            margin-bottom: 16px;
+        }
+
+        .form-group input,
+        .form-group select {
+            width: 100%;
+            padding: 14px;
+            border: 2px solid #e5e7eb;
+            border-radius: 10px;
+            font-size: 16px;
+            transition: border-color 0.3s ease;
+        }
+
+        .form-group input:focus,
+        .form-group select:focus {
+            outline: none;
+            border-color: #2563eb;
+        }
+
+        .info-box {
+            background: #eff6ff;
+            border-radius: 12px;
+            padding: 16px;
+            margin-bottom: 20px;
+        }
+
+        .info-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 12px;
+        }
+
+        .info-item:last-child {
+            margin-bottom: 0;
+        }
+
+        .info-item svg {
+            width: 20px;
+            height: 20px;
+            stroke: #2563eb;
+            flex-shrink: 0;
+        }
+
+        .info-item span {
+            color: #1f2937;
+            font-weight: 600;
+        }
+
+        .bot-preview {
+            background: #f3e8ff;
+            border-radius: 12px;
+            padding: 16px;
+            margin-bottom: 12px;
+        }
+
+        .bot-preview:last-child {
+            margin-bottom: 0;
+        }
+
+        .bot-preview h3 {
+            color: #6b21a8;
+            font-size: 16px;
+            font-weight: 700;
+            margin-bottom: 4px;
+        }
+
+        .bot-preview p {
+            color: #4b5563;
+            font-size: 14px;
+            text-align: left;
+            margin: 0;
+        }
+
+        .command-item {
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+            margin-bottom: 12px;
+            background: #f9fafb;
+            padding: 12px;
+            border-radius: 8px;
+        }
+
+        .command-item code {
+            background: white;
+            color: #2563eb;
+            padding: 6px 12px;
+            border-radius: 6px;
+            font-family: 'Courier New', monospace;
+            font-size: 13px;
+            white-space: nowrap;
+            font-weight: 600;
+        }
+
+        .command-item span {
+            color: #4b5563;
+            font-size: 14px;
+            line-height: 1.5;
+        }
+
+        /* Dashboard */
+        .dashboard {
+            padding: 20px;
+            display: none;
+        }
+
+        .dashboard.active {
+            display: block;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #1e293b 0%, #1e40af 100%);
+            border-radius: 16px;
+            padding: 24px;
+            margin-bottom: 20px;
+            color: white;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+
+        .header-top {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            margin-bottom: 12px;
+        }
+
+        .header-icon {
+            width: 48px;
+            height: 48px;
+            background: rgba(255,255,255,0.2);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .header-icon svg {
+            width: 28px;
+            height: 28px;
+            stroke: white;
+        }
+
+        .header h1 {
+            font-size: 28px;
+            font-weight: 700;
+        }
+
+        .header .subtitle {
+            color: #93c5fd;
+            font-size: 14px;
+        }
+
+        .user-info {
+            background: rgba(255,255,255,0.15);
+            border-radius: 10px;
+            padding: 12px 16px;
+            margin-top: 16px;
+        }
+
+        .user-info .name {
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 4px;
+        }
+
+        .user-info .role {
+            font-size: 14px;
+            color: #bfdbfe;
+        }
+
+        .section {
+            background: white;
+            border-radius: 16px;
+            padding: 20px;
+            margin-bottom: 16px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        .section-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 16px;
+        }
+
+        .section-header svg {
+            width: 24px;
+            height: 24px;
+        }
+
+        .section-header h2 {
+            font-size: 20px;
+            font-weight: 700;
+            color: #111827;
+        }
+
+        .notification-item {
+            border-left: 4px solid;
+            border-radius: 8px;
+            padding: 16px;
+            margin-bottom: 12px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .notification-item:active {
+            transform: scale(0.98);
+            opacity: 0.9;
+        }
+
+        .notification-item:last-child {
+            margin-bottom: 0;
+        }
+
+        .notification-urgent {
+            background: #fef2f2;
+            border-color: #ef4444;
+        }
+
+        .notification-info {
+            background: #eff6ff;
+            border-color: #3b82f6;
+        }
+
+        .notification-reminder {
+            background: #fefce8;
+            border-color: #eab308;
+        }
+
+        .notification-success {
+            background: #f0fdf4;
+            border-color: #22c55e;
+        }
+
+        .notification-item h3 {
+            font-size: 16px;
+            font-weight: 700;
+            margin-bottom: 8px;
+            color: #111827;
+        }
+
+        .notification-item p {
+            color: #4b5563;
+            font-size: 14px;
+            margin-bottom: 8px;
+            line-height: 1.5;
+        }
+
+        .notification-meta {
+            display: flex;
+            gap: 12px;
+            font-size: 12px;
+            color: #6b7280;
+        }
+
+        .quick-actions {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 12px;
+        }
+
+        .action-btn {
+            background: white;
+            border: 2px solid #e5e7eb;
+            border-radius: 12px;
+            padding: 16px;
+            text-align: left;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .action-btn:active {
+            transform: scale(0.97);
+            background: #f9fafb;
+        }
+
+        .action-btn svg {
+            width: 32px;
+            height: 32px;
+            stroke: #2563eb;
+            margin-bottom: 12px;
+        }
+
+        .action-btn h3 {
+            font-size: 16px;
+            font-weight: 700;
+            color: #111827;
+            margin-bottom: 4px;
+        }
+
+        .action-btn p {
+            font-size: 13px;
+            color: #6b7280;
+        }
+
+        .dept-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 12px;
+        }
+
+        .dept-card {
+            border: 2px solid #e5e7eb;
+            border-radius: 12px;
+            padding: 16px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .dept-card.active {
+            border-color: #2563eb;
+            background: #eff6ff;
+        }
+
+        .dept-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 12px;
+        }
+
+        .dept-icon {
+            width: 40px;
+            height: 40px;
+            background: #eff6ff;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .dept-icon svg {
+            width: 24px;
+            height: 24px;
+            stroke: #2563eb;
+        }
+
+        .dept-card h3 {
+            font-size: 16px;
+            font-weight: 700;
+            color: #111827;
+        }
+
+        .dept-card .members {
+            font-size: 13px;
+            color: #6b7280;
+        }
+
+        .dept-details {
+            display: none;
+            padding-top: 12px;
+            border-top: 1px solid #e5e7eb;
+            margin-top: 12px;
+        }
+
+        .dept-card.active .dept-details {
+            display: block;
+        }
+
+        .dept-details h4 {
+            font-size: 13px;
+            font-weight: 700;
+            color: #4b5563;
+            margin-bottom: 8px;
+        }
+
+        .channel-item {
+            font-size: 13px;
+            color: #2563eb;
+            margin-bottom: 4px;
+            cursor: pointer;
+            transition: color 0.3s ease;
+        }
+
+        .channel-item:hover {
+            color: #1e40af;
+            text-decoration: underline;
+        }
+
+        .bot-item {
+            font-size: 13px;
+            color: #16a34a;
+            margin-bottom: 4px;
+            cursor: pointer;
+            transition: color 0.3s ease;
+        }
+
+        .bot-item:hover {
+            color: #15803d;
+            text-decoration: underline;
+        }
+
+        .bot-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 12px;
+        }
+
+        .bot-card {
+            background: #f3e8ff;
+            border: 2px solid #e9d5ff;
+            border-radius: 12px;
+            padding: 16px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .bot-card:active {
+            background: #e9d5ff;
+            transform: scale(0.98);
+        }
+
+        .bot-card h3 {
+            font-size: 16px;
+            font-weight: 700;
+            color: #6b21a8;
+            margin-bottom: 8px;
+        }
+
+        .bot-card p {
+            font-size: 14px;
+            color: #4b5563;
+            margin-bottom: 12px;
+        }
+
+        .bot-features {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .bot-feature {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 13px;
+            color: #4b5563;
+        }
+
+        .bot-feature svg {
+            width: 16px;
+            height: 16px;
+            stroke: #7c3aed;
+            flex-shrink: 0;
+        }
+
+        .command-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 10px;
+        }
+
+        .command-card {
+            background: #f9fafb;
+            border-radius: 10px;
+            padding: 12px;
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .command-card:active {
+            background: #e5e7eb;
+            transform: scale(0.98);
+        }
+
+        .command-card code {
+            background: #dbeafe;
+            color: #1e40af;
+            padding: 6px 12px;
+            border-radius: 6px;
+            font-family: 'Courier New', monospace;
+            font-size: 13px;
+            white-space: nowrap;
+            font-weight: 600;
+        }
+
+        .command-card span {
+            font-size: 13px;
+            color: #4b5563;
+            line-height: 1.5;
+        }
+
+        /* Buttons */
+        .btn {
+            width: 100%;
+            padding: 16px;
+            border: none;
+            border-radius: 12px;
+            font-size: 16px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .btn-primary {
+            background: #2563eb;
+            color: white;
+        }
+
+        .btn-primary:active {
+            background: #1e40af;
+            transform: scale(0.98);
+        }
+
+        .btn-primary:disabled {
+            background: #9ca3af;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .btn-secondary {
+            background: #e5e7eb;
+            color: #374151;
+        }
+
+        .btn-secondary:active {
+            background: #d1d5db;
+        }
+
+        .btn:disabled {
+            background: #d1d5db;
+            color: #9ca3af;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .btn-group {
+            display: flex;
+            gap: 12px;
+            margin-top: 24px;
+        }
+
+        .btn-group .btn {
+            flex: 1;
+        }
+
+        /* Loading State */
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(255,255,255,.3);
+            border-radius: 50%;
+            border-top-color: #fff;
+            animation: spin 1s ease-in-out infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* Toast Notification */
+        .toast {
+            position: fixed;
+            bottom: 100px;
+            left: 50%;
+            transform: translateX(-50%) translateY(100px);
+            background: #1f2937;
+            color: white;
+            padding: 12px 24px;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+            z-index: 1000;
+            opacity: 0;
+            transition: all 0.3s ease;
+        }
+
+        .toast.show {
+            transform: translateX(-50%) translateY(0);
+            opacity: 1;
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
+        @media (max-width: 640px) {
+            .quick-actions {
+                grid-template-columns: 1fr;
+            }
+
+            .dept-grid,
+            .bot-grid,
+            .command-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="app-container">
+        <!-- Welcome Screen -->
+        <div id="welcomeScreen" class="welcome-screen">
+            <div class="logo">
+                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 6l3 1m0 0l-3 9a5.002 5.002 0 006.001 0M6 7l3 9M6 7l6-2m6 2l3-1m-3 1l-3 9a5.002 5.002 0 006.001 0M18 7l3 9m-3-9l-6-2m0-2v2m0 16V5m0 16H9m3 0h3"/>
+                </svg>
+            </div>
+            <h1>City Law Firm</h1>
+            <p class="subtitle">Virtual Office Workspace</p>
+            <div class="welcome-card">
+                <p>Your integrated platform for case management, team collaboration, and firm operations. Access everything you need to serve clients and work seamlessly with colleagues.</p>
+            </div>
+            <button class="btn btn-primary" onclick="app.startOnboarding()">Begin Onboarding</button>
+        </div>
+
+        <!-- Onboarding Screen -->
+        <div id="onboardingScreen" class="onboarding-screen hidden">
+            <div class="onboarding-card">
+                <div class="step-icon" id="stepIcon"></div>
+                <h2 id="stepTitle"></h2>
+                <div class="progress-dots" id="progressDots"></div>
+                <div class="onboarding-content" id="stepContent"></div>
+                <div class="btn-group">
+                    <button class="btn btn-secondary hidden" id="backBtn" onclick="app.previousStep()">Back</button>
+                    <button class="btn btn-primary" id="nextBtn" onclick="app.nextStep()">Get Started</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Dashboard -->
+        <div id="dashboard" class="dashboard">
+            <div class="header">
+                <div class="header-top">
+                    <div class="header-icon">
+                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 6l3 1m0 0l-3 9a5.002 5.002 0 006.001 0M6 7l3 9M6 7l6-2m6 2l3-1m-3 1l-3 9a5.002 5.002 0 006.001 0M18 7l3 9m-3-9l-6-2m0-2v2m0 16V5m0 16H9m3 0h3"/>
+                        </svg>
+                    </div>
+                    <div>
+                        <h1>City Law Firm</h1>
+                        <p class="subtitle">Virtual Office Workspace</p>
+                    </div>
+                </div>
+                <div class="user-info" id="userInfo"></div>
+            </div>
+
+            <div class="section">
+                <div class="section-header">
+                    <svg fill="none" stroke="#f97316" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/>
+                    </svg>
+                    <h2>Live Notifications</h2>
+                </div>
+                <div id="notifications"></div>
+            </div>
+
+            <div class="section">
+                <div class="section-header">
+                    <svg fill="none" stroke="#2563eb" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+                    </svg>
+                    <h2>Quick Actions</h2>
+                </div>
+                <div class="quick-actions" id="quickActions"></div>
+            </div>
+
+            <div class="section">
+                <div class="section-header">
+                    <svg fill="none" stroke="#2563eb" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/>
+                    </svg>
+                    <h2>Departments & Channels</h2>
+                </div>
+                <div class="dept-grid" id="departments"></div>
+            </div>
+
+            <div class="section">
+                <div class="section-header">
+                    <svg fill="none" stroke="#7c3aed" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                    </svg>
+                    <h2>Automation Assistants</h2>
+                </div>
+                <div class="bot-grid" id="bots"></div>
+            </div>
+
+            <div class="section">
+                <div class="section-header">
+                    <svg fill="none" stroke="#2563eb" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/>
+                    </svg>
+                    <h2>Essential Commands</h2>
+                </div>
+                <div class="command-grid" id="commands"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Initialize Telegram WebApp
+        const tg = window.Telegram?.WebApp || {
+            ready: () => {},
+            expand: () => {},
+            enableClosingConfirmation: () => {},
+            disableClosingConfirmation: () => {},
+            MainButton: {
+                setText: () => {},
+                show: () => {},
+                hide: () => {},
+                enable: () => {},
+                disable: () => {},
+                showProgress: () => {},
+                hideProgress: () => {},
+                onClick: () => {},
+                offClick: () => {}
+            },
+            Back
